@@ -61,3 +61,25 @@ include(GNUInstallDirs)
 install(TARGETS lux_metal
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/lux/plugins
 )
+
+# End-to-end test: dlopen the plugin and run a real Metal vector add.
+option(LUX_METAL_BUILD_TESTS "Build the lux-metal plugin smoke test" ON)
+if(LUX_METAL_BUILD_TESTS AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test/test_load.cpp")
+  add_executable(lux_metal_test_load test/test_load.cpp)
+  target_compile_features(lux_metal_test_load PRIVATE cxx_std_17)
+  target_include_directories(lux_metal_test_load
+    PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/../lux-accel/include
+      ${CMAKE_CURRENT_SOURCE_DIR}/../install/include
+  )
+  if(lux-accel_FOUND AND TARGET lux::luxaccel)
+    target_include_directories(lux_metal_test_load PRIVATE
+      $<TARGET_PROPERTY:lux::luxaccel,INTERFACE_INCLUDE_DIRECTORIES>)
+  endif()
+  target_link_libraries(lux_metal_test_load PRIVATE ${CMAKE_DL_LIBS})
+  add_dependencies(lux_metal_test_load lux_metal)
+
+  enable_testing()
+  add_test(NAME lux_metal_load
+           COMMAND lux_metal_test_load $<TARGET_FILE:lux_metal>)
+endif()

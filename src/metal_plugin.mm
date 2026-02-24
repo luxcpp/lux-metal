@@ -238,7 +238,23 @@ void* metal_create_kernel_from_source(void* device, const char* source, const ch
         NSError* error = nil;
         NSString* src = [NSString stringWithUTF8String:source];
         MTLCompileOptions* opts = [[MTLCompileOptions alloc] init];
+        // mathMode is the modern API (macOS 15+); fastMathEnabled is deprecated
+        // but kept as the fallback for older SDK builds.
+#if defined(__MAC_15_0) && (__MAC_OS_X_VERSION_MAX_ALLOWED >= __MAC_15_0)
+        if (@available(macOS 15.0, iOS 18.0, *)) {
+            opts.mathMode = MTLMathModeFast;
+        } else {
+#  pragma clang diagnostic push
+#  pragma clang diagnostic ignored "-Wdeprecated-declarations"
+            opts.fastMathEnabled = YES;
+#  pragma clang diagnostic pop
+        }
+#else
+#  pragma clang diagnostic push
+#  pragma clang diagnostic ignored "-Wdeprecated-declarations"
         opts.fastMathEnabled = YES;
+#  pragma clang diagnostic pop
+#endif
 
         id<MTLLibrary> lib = [dev->device newLibraryWithSource:src options:opts error:&error];
         if (error || !lib) {
